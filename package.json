@@ -1,0 +1,10 @@
+{
+  "name": "chart2svg",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SVG data cleaning pipeline for Beagle_Plus chart datasets",
+  "license": "MIT",
+  "dependencies": {
+    "svgo": "^2.8.0"
+  }
+}

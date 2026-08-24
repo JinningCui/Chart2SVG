@@ -1,0 +1,8 @@
+CairoSVG>=2.7
+Pillow>=10
+cssselect>=1.2
+cssutils>=2.9
+lxml>=5
+numpy>=1.26
+scikit-image>=0.22
+tqdm>=4.66
