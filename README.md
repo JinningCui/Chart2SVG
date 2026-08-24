@@ -1,10 +1,11 @@
-<h1 align="center">Chart2SVG</h1>
+<h1 align="center">Chart2SVG: Editable SVG Generation from Raster Chart Images</h1>
 
 <p align="center">
-  <strong>Multimodal Language Models for Chart SVG Generation</strong>
+  <strong>Accepted to IEEE VIS 2026</strong>
 </p>
 
 <p align="center">
+  <img alt="IEEE VIS 2026" src="https://img.shields.io/badge/IEEE%20VIS%202026-Accepted-success?style=flat-square">
   <a href="https://huggingface.co/datasets/syslocker/Beagle_Plus"><img alt="Hugging Face Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Beagle__Plus-FFD21E?style=flat-square"></a>
   <a href="https://github.com/JinningCui/Chart2SVG/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue?style=flat-square"></a>
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
