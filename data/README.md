@@ -50,3 +50,18 @@ Run the full pipeline from the repository root:
 ```bash
 PYTHON_BIN="$PWD/.venv/bin/python" ./data/data_clean.sh
 ```
+
+After cleaning, generate semantic SVG training records with:
+
+```bash
+./data/gen_semantic_svg.sh \
+  --base-dir "$PWD/data/data/Beagle" \
+  --python "$PWD/.venv/bin/python"
+```
+
+Split the merged dataset JSON files into per-chart files with:
+
+```bash
+"$PWD/.venv/bin/python" data/split_dataset.py \
+  --source-dir "$PWD/data/data/Beagle/train_json"
+```
