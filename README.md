@@ -1,8 +1,10 @@
 # Chart2SVG
 
-Chart2SVG provides a reproducible pipeline for cleaning chart SVG datasets and
-turning the cleaned charts into multimodal instruction-tuning data. The current
-workflow supports five Beagle_Plus sources:
+Chart2SVG is an end-to-end toolkit for converting chart images into structured
+SVG. It covers dataset cleaning, semantic SVG tokenization, Qwen3-VL model
+initialization, supervised fine-tuning (SFT), GRPO reinforcement learning, LoRA
+merging, inference, and SVG rendering. The data pipeline currently supports five
+Beagle_Plus sources:
 
 - ChartBlocks (`chartblocks`)
 - FusionCharts (`fusion_clean`)
@@ -10,8 +12,7 @@ workflow supports five Beagle_Plus sources:
 - Plotly (`plotly_export`)
 - Apache ECharts (`echarts`)
 
-All pipeline code is stored in [`data/`](data/). Dataset files are intentionally
-excluded from Git and can be downloaded separately from
+Dataset files are intentionally excluded from Git and can be downloaded from
 [Beagle_Plus on Hugging Face](https://huggingface.co/datasets/syslocker/Beagle_Plus).
 
 ## Workflow
@@ -37,6 +38,19 @@ data/gen_semantic_svg.sh
  data/split_dataset.py
           │
           └── train_json/<dataset>/<chart-id>.json
+          │
+          ▼
+ preare_svg_qwen.py
+          │
+          ▼
+scripts/sft/lora_sft.sh
+          │
+          ├── merge_lora.sh (optional)
+          ▼
+ scripts/grpo/grpo.sh
+          │
+          ▼
+ inference + SVG rendering
 ```
 
 ## Repository layout
@@ -45,20 +59,38 @@ data/gen_semantic_svg.sh
 Chart2SVG/
 ├── README.md
 ├── package.json
-└── data/
-    ├── data_clean.sh
-    ├── gen_semantic_svg.sh
-    ├── gen_svg_qwen.py
-    ├── gen_std_svg_json.py
-    ├── split_dataset.py
-    ├── semantic_tokens.py
-    ├── generate_syntactic_svg.py
-    ├── svgo_optimizer.js
-    ├── svg2png.py
-    ├── check_visualization_rules.py
-    ├── check_beagle_png_consistency.py
-    ├── repair_*.py
-    └── requirements.txt
+├── preare_svg_qwen.py              # Initialize semantic SVG tokens
+├── merge_lora.sh                   # Merge LoRA into the base model
+├── data/
+│   ├── data_clean.sh
+│   ├── gen_semantic_svg.sh
+│   ├── gen_svg_qwen.py
+│   ├── gen_std_svg_json.py
+│   ├── split_dataset.py
+│   ├── semantic_tokens.py
+│   ├── token_config.py
+│   ├── tokenizer.py
+│   ├── svg_dataset.py
+│   ├── generate_syntactic_svg.py
+│   ├── svgo_optimizer.js
+│   ├── svg2png.py
+│   ├── check_visualization_rules.py
+│   ├── check_beagle_png_consistency.py
+│   ├── repair_*.py
+│   └── requirements.txt
+├── svglib/
+│   ├── io.py
+│   └── preprocess.py
+└── scripts/
+    ├── sft/lora_sft.sh
+    ├── grpo/
+    │   ├── grpo.sh
+    │   ├── roll_out.sh
+    │   ├── plugin.py
+    │   └── prompt.txt
+    └── inference/
+        ├── run_inference_and_render.py
+        └── batch_inference.py
 ```
 
 ## 1. Installation
@@ -83,6 +115,17 @@ brew install cairo pango libffi
 
 If Cairo is provided by Conda, pass its library directory through
 `CAIRO_LIBRARY_DIR` when running the scripts.
+
+Model training and inference additionally require a CUDA-enabled PyTorch
+environment, Transformers with Qwen3-VL support,
+[ms-swift](https://github.com/modelscope/ms-swift), and optionally vLLM for GRPO
+rollout serving. The reward code also uses CairoSVG, Pillow, NumPy, SciPy,
+scikit-image, and lxml.
+
+```bash
+pip install torch transformers datasets omegaconf ms-swift
+# Install a vLLM build compatible with your CUDA/PyTorch environment for GRPO.
+```
 
 ## 2. Prepare the datasets
 
@@ -185,7 +228,7 @@ Use another dataset location, selected datasets, or a different worker count:
 
 ```bash
 ./data/gen_semantic_svg.sh \
-  --base-dir /path/to/Beagle_Plus \
+  --base-dir "Path to your Beagle_Plus dataset" \
   --datasets echarts,chartblocks \
   --workers 8 \
   --python "$PWD/.venv/bin/python"
@@ -229,7 +272,7 @@ Select only part of the generated data:
 
 ```bash
 "$PWD/.venv/bin/python" data/split_dataset.py \
-  --source-dir /path/to/Beagle_Plus/train_json \
+  --source-dir "Path to your train_json directory" \
   --datasets echarts,chartblocks
 ```
 
@@ -253,11 +296,169 @@ Each record follows the multimodal conversation format:
     {"role": "user", "content": "<image>Convert this image to SVG code."},
     {"role": "assistant", "content": "[<|START_OF_SVG|>]..."}
   ],
-  "images": ["/absolute/path/to/chart.png"]
+  "images": ["Path to your chart image"]
 }
 ```
+
+## 6. Initialize Qwen3-VL semantic SVG tokens
+
+[`preare_svg_qwen.py`](preare_svg_qwen.py) collects the semantic tokens defined
+by the data package, adds them to the tokenizer, resizes the model embeddings,
+and initializes new embeddings from their English semantic descriptions.
+
+Its default relative paths are:
+
+| Purpose | Path |
+|---|---|
+| Base model | `models/Qwen3-VL-4B-Instruct` |
+| Initialized output | `models/Qwen3_Chart_4B_Initialized` |
+
+Place the base model at that location or edit `MODEL_PATH` and `SAVE_PATH`, then
+run:
+
+```bash
+python preare_svg_qwen.py
+```
+
+The script currently loads the model on `cuda:1`; adjust `device_map` for your
+GPU layout.
+
+## 7. Supervised fine-tuning
+
+Before running SFT, replace every descriptive placeholder in
+[`scripts/sft/lora_sft.sh`](scripts/sft/lora_sft.sh):
+
+| Placeholder | Replace with |
+|---|---|
+| `Path to your model` | Initialized model directory |
+| `Path to your dataset` | One split training-data directory |
+
+Run LoRA SFT with ms-swift:
+
+```bash
+bash scripts/sft/lora_sft.sh
+```
+
+The provided configuration uses Qwen3-VL, LoRA on all linear layers, preserves
+`embed_tokens` and `lm_head`, and uses an 8,192-token maximum sequence length.
+It sets LoRA rank 8, LoRA alpha 32, two epochs, and gradient accumulation of two
+steps. Adjust GPU IDs, `CUDA_VISIBLE_DEVICES`, `NPROC_PER_NODE`, batch sizes,
+and `--output_dir` for your environment.
+
+## 8. Merge a LoRA checkpoint
+
+[`merge_lora.sh`](merge_lora.sh) resolves paths relative to its own directory:
+
+| Variable | Default relative path |
+|---|---|
+| `CKPT_DIR` | `../svg_output/v12-20260102-163107/checkpoint-3189` |
+| `OUTPUT_DIR` | `models/Qwen3_Chart_Stage1` |
+
+Edit those variables when your checkpoint layout differs, then run:
+
+```bash
+bash merge_lora.sh
+```
+
+The script calls `swift export --merge_lora true` and writes the merged model to
+`OUTPUT_DIR`.
+
+## 9. GRPO reinforcement learning
+
+GRPO uses ms-swift, a vLLM rollout server, and the custom `svg_pipeline` reward.
+Before running it, replace:
+
+- `Path to your model` in `scripts/grpo/roll_out.sh` and
+  `scripts/grpo/grpo.sh`;
+- `Path to your plugin` in `scripts/grpo/grpo.sh`, normally with
+  `scripts/grpo/plugin.py`; and
+- the relative `grpo_train_json/...` entries with your GRPO datasets.
+
+Start the rollout server:
+
+```bash
+bash scripts/grpo/roll_out.sh
+```
+
+In another terminal, start GRPO training:
+
+```bash
+bash scripts/grpo/grpo.sh
+```
+
+The configuration uses four GPUs, vLLM server mode on port 8000, LoRA, four
+generations per prompt, and an 8,192-token completion limit. Keep
+`CUDA_VISIBLE_DEVICES`, `NPROC_PER_NODE`, and vLLM tensor parallelism consistent
+with your hardware.
+
+### SVG reward
+
+[`scripts/grpo/plugin.py`](scripts/grpo/plugin.py) registers
+`SVGDependentReward` as `svg_pipeline`. For each completion it:
+
+1. extracts standard or semantic SVG output;
+2. rejects missing, invalid, oversized, timed-out, or non-renderable SVG;
+3. renders valid SVG in a spawned sandbox process;
+4. compares it with the reference image using relaxed IoU, SSIM, and PSNR; and
+5. returns the mean visual score for valid SVG, while invalid SVG receives
+   `-1.0`.
+
+The implementation computes a repetition statistic but does not currently
+apply it to the final reward value.
+
+## 10. Inference and rendering
+
+Run inference for one JSON or JSONL dataset:
+
+```bash
+python scripts/inference/run_inference_and_render.py \
+  --checkpoint_path "Path to your checkpoint" \
+  --dataset_path "Path to your dataset JSON" \
+  --output_dir "Path to your inference output" \
+  --resized_dir "Path to your normalized images"
+```
+
+Useful optional arguments include:
+
+- `--limit N`: process only the first `N` pending samples;
+- `--model_type qwen3_vl`: select the model type;
+- `--infer_backend pt|vllm|lmdeploy`: select the inference backend;
+- `--max_batch_size N`: control inference batching;
+- `--render_workers N`: control parallel SVG rendering; and
+- `--stream` or `--no_stream`: control streaming behavior.
+
+The script normalizes input images to 512×512, generates four candidates per
+sample, converts semantic SVG to standard SVG, restores original dimensions,
+and saves SVG, PNG, and JSON artifacts.
+
+For multiple datasets, edit `datasets` and `script_path` in
+[`scripts/inference/batch_inference.py`](scripts/inference/batch_inference.py),
+ensure the checkpoint default in `run_inference_and_render.py` is configured,
+and run:
+
+```bash
+python scripts/inference/batch_inference.py
+```
+
+## Path placeholders
+
+The public scripts intentionally use descriptive placeholders instead of
+private server paths:
+
+| Placeholder | Meaning |
+|---|---|
+| `Path to your model` | Base or trained model directory |
+| `Path to your dataset` | Training dataset directory |
+| `Path to your checkpoint` | SFT/GRPO checkpoint directory |
+| `Path to your plugin` | Absolute or relative path to `plugin.py` |
+| `Path to your inference script` | Path to the inference entry point |
+
+Replace them before running the corresponding command. Do not commit access
+tokens, private filesystem paths, or model credentials.
 
 ## License
 
 The pipeline code is released under the [MIT License](LICENSE). The source
-datasets retain their respective licenses and terms of use.
+datasets retain their respective licenses and terms of use. The training
+scripts include adaptations of ms-swift examples; follow the applicable
+upstream licenses when redistributing those portions.
