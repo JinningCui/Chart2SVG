@@ -77,7 +77,8 @@ Chart2SVG/
 │   ├── check_visualization_rules.py
 │   ├── check_beagle_png_consistency.py
 │   ├── repair_*.py
-│   └── requirements.txt
+│   ├── requirements.txt            # Lightweight data-cleaning dependencies
+│   └── requirement.txt             # Pinned training/GRPO environment
 ├── svglib/
 │   ├── io.py
 │   └── preprocess.py
@@ -95,15 +96,36 @@ Chart2SVG/
 
 ## 1. Installation
 
-Python 3.10+, Node.js, npm, Cairo, and its native libraries are required.
+### 1.1 Runtime requirements
+
+Python is required for every stage. The
+[official ms-swift installation guide](https://swift.readthedocs.io/zh-cn/latest/GetStarted/SWIFT-installation.html)
+requires Python 3.10 or newer and recommends Python 3.12. The exported training
+environment in [`data/requirement.txt`](data/requirement.txt) was created with
+Python 3.12.12.
+
+The data-cleaning pipeline additionally requires Node.js, npm, Cairo, and its
+native libraries. Training and inference require a CUDA-enabled PyTorch
+environment; GRPO rollout also requires a vLLM build compatible with the
+installed CUDA and PyTorch versions.
+
+### 1.2 Clone the repository
 
 ```bash
 git clone https://github.com/JinningCui/Chart2SVG.git
 cd Chart2SVG
+```
 
+### 1.3 Data-cleaning environment
+
+Use the lightweight dependency file when only cleaning data and generating
+semantic SVG:
+
+```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r data/requirements.txt
+python -m pip install -U pip
+python -m pip install -r data/requirements.txt
 npm install
 ```
 
@@ -116,16 +138,38 @@ brew install cairo pango libffi
 If Cairo is provided by Conda, pass its library directory through
 `CAIRO_LIBRARY_DIR` when running the scripts.
 
-Model training and inference additionally require a CUDA-enabled PyTorch
-environment, Transformers with Qwen3-VL support,
-[ms-swift](https://github.com/modelscope/ms-swift), and optionally vLLM for GRPO
-rollout serving. The reward code also uses CairoSVG, Pillow, NumPy, SciPy,
-scikit-image, and lxml.
+### 1.4 Training, GRPO, and inference environment
+
+The full lock file includes PyTorch 2.8.0, Transformers 4.57.6, vLLM 0.11.0,
+ms-swift's training stack, and the SVG reward dependencies. It also contains
+`-e ./ms-swift`, so clone ms-swift into the Chart2SVG repository root before
+installing it:
 
 ```bash
-pip install torch transformers datasets omegaconf ms-swift
-# Install a vLLM build compatible with your CUDA/PyTorch environment for GRPO.
+python3.12 -m venv .venv-training
+source .venv-training/bin/activate
+python -m pip install -U pip
+
+git clone https://github.com/modelscope/ms-swift.git ms-swift
+# Checkout the ms-swift revision required by your experiment when applicable.
+
+python -m pip install -r data/requirement.txt
 ```
+
+This lock file targets a Linux CUDA 12 environment and includes CUDA-specific
+packages such as FlashAttention and vLLM. Do not use it unchanged for macOS,
+CPU-only, NPU, or a different CUDA/PyTorch combination.
+
+For a fresh, unpinned ms-swift installation, the official wheel command is:
+
+```bash
+python -m pip install 'ms-swift' -U
+```
+
+Follow the official guide when choosing a source revision, Docker image, or
+hardware-specific environment. In particular, install vLLM as a version
+compatible with the selected PyTorch and CUDA stack rather than mixing versions
+from unrelated environments.
 
 ## 2. Prepare the datasets
 
