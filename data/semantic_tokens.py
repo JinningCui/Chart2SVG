@@ -1,7 +1,3 @@
-# -*- coding: utf-8 -*-
-# Author: ximing
-# Copyright (c) 2024, XiMing Xing.
-# License: MIT License
 # Description: SVG Semantic Tokens encoder and decoder
 # Fixed version for Chart2SVG task (V21 - Hierarchy Separation Fix)
 
