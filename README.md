@@ -1,4 +1,19 @@
-# Chart2SVG
+<h1 align="center">Chart2SVG</h1>
+
+<p align="center">
+  <strong>Multimodal Language Models for Chart SVG Generation</strong>
+</p>
+
+<p align="center">
+  <a href="https://huggingface.co/datasets/syslocker/Beagle_Plus"><img alt="Hugging Face Dataset" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Beagle__Plus-FFD21E?style=flat-square"></a>
+  <a href="https://github.com/JinningCui/Chart2SVG/blob/main/LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-blue?style=flat-square"></a>
+  <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-%E2%89%A53.10-3776AB?style=flat-square&amp;logo=python&amp;logoColor=white">
+  <a href="https://swift.readthedocs.io/zh-cn/latest/GetStarted/SWIFT-installation.html"><img alt="Framework: ms-swift" src="https://img.shields.io/badge/Framework-ms--swift-6C63FF?style=flat-square"></a>
+</p>
+
+<p align="center">
+  <img src="assets/figures/fig1.png" alt="Chart2SVG converts raster chart images into reconstructed SVG and supports chart editing" width="100%">
+</p>
 
 Chart2SVG is an end-to-end toolkit for converting chart images into structured
 SVG. It covers dataset cleaning, semantic SVG tokenization, Qwen3-VL model
@@ -59,6 +74,7 @@ scripts/sft/lora_sft.sh
 Chart2SVG/
 ├── README.md
 ├── package.json
+├── assets/figures/fig1.png         # Project overview figure
 ├── preare_svg_qwen.py              # Initialize semantic SVG tokens
 ├── merge_lora.sh                   # Merge LoRA into the base model
 ├── data/
