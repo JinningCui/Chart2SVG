@@ -156,6 +156,11 @@ git clone https://github.com/modelscope/ms-swift.git ms-swift
 python -m pip install -r data/requirement.txt
 ```
 
+After ms-swift is configured, replace the corresponding scripts under
+`ms-swift/examples/train/` with this repository's customized training scripts,
+including `scripts/sft/`, `scripts/grpo/`, and the other matching entries,
+before starting training.
+
 This lock file targets a Linux CUDA 12 environment and includes CUDA-specific
 packages such as FlashAttention and vLLM. Do not use it unchanged for macOS,
 CPU-only, NPU, or a different CUDA/PyTorch combination.
