@@ -212,3 +212,7 @@ python scripts/inference/batch_inference.py
 
 The code is released under the [MIT License](LICENSE). Source datasets retain
 their respective licenses and terms of use.
+
+## Chart Structure Graph
+
+For details about Chart Structure Graph (CSG), see the [CSG-eval repository](https://github.com/JinningCui/CSG-eval).
