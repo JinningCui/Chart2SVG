@@ -56,7 +56,7 @@ data/gen_semantic_svg.sh
           └── train_json/<dataset>/<chart-id>.json
           │
           ▼
- preare_svg_qwen.py
+ model/prepare_svg_qwen.py
           │
           ▼
 scripts/sft/lora_sft.sh
@@ -76,8 +76,10 @@ Chart2SVG/
 ├── README.md
 ├── package.json
 ├── assets/figures/fig1.png         # Project overview figure
-├── preare_svg_qwen.py              # Initialize semantic SVG tokens
 ├── merge_lora.sh                   # Merge LoRA into the base model
+├── model/
+│   ├── prepare_svg_qwen.py         # Initialize semantic SVG tokens
+│   └── test_tokens.py              # Audit and filter overlong samples
 ├── data/
 │   ├── data_clean.sh
 │   ├── gen_semantic_svg.sh
@@ -368,7 +370,7 @@ Each record follows the multimodal conversation format:
 
 ## 6. Initialize Qwen3-VL semantic SVG tokens
 
-[`preare_svg_qwen.py`](preare_svg_qwen.py) collects the semantic tokens defined
+[`model/prepare_svg_qwen.py`](model/prepare_svg_qwen.py) collects the semantic tokens defined
 by the data package, adds them to the tokenizer, resizes the model embeddings,
 and initializes new embeddings from their English semantic descriptions.
 
@@ -383,7 +385,7 @@ Place the base model at that location or edit `MODEL_PATH` and `SAVE_PATH`, then
 run:
 
 ```bash
-python preare_svg_qwen.py
+python model/prepare_svg_qwen.py
 ```
 
 The script currently loads the model on `cuda:1`; adjust `device_map` for your

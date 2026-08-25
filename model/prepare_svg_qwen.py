@@ -5,27 +5,17 @@ from pathlib import Path
 import torch
 from transformers import AutoProcessor, AutoTokenizer, Qwen3VLForConditionalGeneration
 
-# Ensure Chart2SVG can be imported
-# Assuming the script is run from the project root or Chart2SVG directory
-# We add the parent directory of 'models' (which is Chart2SVG) to sys.path just in case
+# Ensure the repository package can be imported after moving this script under model/.
 current_file_path = Path(__file__).resolve()
-project_root = current_file_path.parents[1]
-if str(project_root) not in sys.path:
-    sys.path.append(str(project_root))
+repository_root = current_file_path.parents[1]
+package_parent = repository_root.parent
+if str(package_parent) not in sys.path:
+    sys.path.insert(0, str(package_parent))
 
-try:
-    from Chart2SVG.data import (
-        SVGToken, AttribMapper, ContainerMapper, GradientsMapper, PathCMDMapper,
-        PathMapper, ShapeMapper, NUM_TOKEN, TokenDescMapper
-    )
-except ImportError:
-    # Fallback if running from a different context where Chart2SVG is not resolved directly
-    # This assumes the standard structure Chart2SVG/Chart2SVG exists
-    sys.path.append(str(project_root.parent))
-    from Chart2SVG.data import (
-        SVGToken, AttribMapper, ContainerMapper, GradientsMapper, PathCMDMapper,
-        PathMapper, ShapeMapper, NUM_TOKEN, TokenDescMapper
-    )
+from Chart2SVG.data import (
+    SVGToken, AttribMapper, ContainerMapper, GradientsMapper, PathCMDMapper,
+    PathMapper, ShapeMapper, NUM_TOKEN, TokenDescMapper
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
